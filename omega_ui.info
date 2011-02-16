@@ -1,0 +1,7 @@
+; $Id: omega_ui.info,v 1.1 2010/11/09 15:16:48 himerus Exp $
+name = Omega UI
+description = The Omega UI is an advanced addon for the <a href="http://himer.us/omega960">Omega</a> theme and subthemes, creating a visual interface for managing the layout and theme settings for you Omega subtheme, and integrates also with theme settings forms provided by the <a href="http://drupal.org/project/delta">Delta</a> module.
+package = Theme Tools
+core = 7.x
+
+files[] = omega_ui.module

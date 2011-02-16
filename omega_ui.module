@@ -1,0 +1,98 @@
+<?php
+// $Id: omega_ui.module,v 1.1 2010/11/09 15:16:48 himerus Exp $
+
+/**
+ * @file Implement the Omega UI enhanced interface for Omega and Delta theme settings.
+ */
+ 
+/**
+ * Implementation of hook_permission().
+ */
+function omega_ui_permission() {
+  return array(
+    'configure omegaui' => array(
+      'title' => t('Use Omega User Interface'),
+      'description' => t('Will grant user permission to edit Omega theme settings and Delta overrides using the Omega User Interface.'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function omega_ui_menu() {
+  // top level menu item under admin/appearance
+  $items['admin/appearance/oui'] = array(
+    'title' => 'Omega UI',
+    'description' => 'Visually configure your Omega and Delta theme settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('oui_theme_settings_config'),
+    'access arguments' => array('administer omegaui'),
+    //'file' => 'delta_ui.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -1,
+  );
+  // provide default settings for OUI
+  $items['admin/appearance/oui/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Manage Omega UI settings.',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'parent' => 'admin/appearance/oui',
+    'weight' => -25,
+  );
+  // provide a menu item for any Omega subtheme
+  foreach (list_themes() as $theme) {
+    if($theme->name == 'omega' || (isset($theme->base_theme) && $theme->base_theme == 'omega')) {
+      $items['admin/appearance/oui/' . $theme->name] = array(
+        'title' => $theme->info['name'],
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('system_theme_settings', $theme->name),
+        'type' => MENU_LOCAL_TASK,
+        'access arguments' => array('administer omegaui'),
+        'file path' => drupal_get_path('module', 'system'),
+        'file' => 'system.admin.inc',
+      );
+    }
+  }
+  return $items;
+}
+
+/**
+ * Menu callback; displays the delta listing page.
+ */
+function oui_theme_settings_config($form, &$form_state) {
+  drupal_set_title(t('Omega User Interface Settings'));
+  $form['oui'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Omega User Interface Settings & Configuration'),
+    '#description' => t('These default settings for Omega UI will manipulate the way the theme settings interface will be rendered and how you can interact with it.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  return system_settings_form($form);
+}
+/**
+ * Provide links to Omega UI configuration for Theme Settings forms
+ */
+
+function omega_ui_form_system_theme_settings_alter(&$form, &$form_state) {
+  // check that we are dealing with Omega base or an Omega subtheme
+  if(isset($form['omega_grid'])) {
+    //krumo($form['omega_grid']);
+    // loop over the children elements in the settings form
+    foreach(element_children($form['omega_grid']) AS $zone) {
+      // skip over the default grid settings section
+      if($zone != 'defaults') {
+        $form['omega_grid'][$zone]['omega_ui'] = array(
+          '#markup' => t('<p><a href="#config">Configure this zone with the Omega UI.</a></p>'),
+          '#weight' => -100,
+        );
+      }
+    }
+  }
+}
+
+function omega_ui_preprocess_page($vars) {
+  //$themes = list_themes();
+  //krumo($themes);
+}
