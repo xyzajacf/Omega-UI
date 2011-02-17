@@ -76,23 +76,138 @@ function oui_theme_settings_config($form, &$form_state) {
  */
 
 function omega_ui_form_system_theme_settings_alter(&$form, &$form_state) {
-  // check that we are dealing with Omega base or an Omega subtheme
-  if(isset($form['omega_grid'])) {
-    //krumo($form['omega_grid']);
-    // loop over the children elements in the settings form
-    foreach(element_children($form['omega_grid']) AS $zone) {
-      // skip over the default grid settings section
-      if($zone != 'defaults') {
-        $form['omega_grid'][$zone]['omega_ui'] = array(
-          '#markup' => t('<p><a href="#config">Configure this zone with the Omega UI.</a></p>'),
-          '#weight' => -100,
-        );
+  // leave out all not OUI forms
+  if(arg(2) != 'oui') {
+    // check that we are dealing with Omega base or an Omega subtheme
+    if(isset($form['omega_grid'])) {
+      //krumo($form['omega_grid']);
+      // loop over the children elements in the settings form
+      foreach(element_children($form['omega_grid']) AS $zone) {
+        // skip over the default grid settings section
+        if($zone != 'defaults') {
+          $form['omega_grid'][$zone]['omega_ui'] = array(
+            '#markup' => t('<p><a href="#config">Configure this zone with the Omega UI.</a></p>'),
+            '#weight' => -100,
+          );
+        }
       }
     }
+  }
+  // customize OUI forms
+  else {
+    // we are going to "hide" the default form
+    // is this the right approach?? we want to change/append to the form, and then be able to 
+    // manipulate the values inside the form via jQuery UI interactions
+    
+    if(isset($form['omega_grid'])) {
+    //krumo($form);
+      $form['omega_grid']['#access'] = FALSE;
+      $form['omega_general']['#access'] = FALSE;
+      $form['theme_settings']['#access'] = FALSE;
+      $form['logo']['#access'] = FALSE;
+      $form['favicon']['#access'] = FALSE;
+      //krumo($form['omega_grid']);
+      
+      $form['omega_ui'] = array(
+        '#prefix' => '<div class="omega-ui">',
+        '#suffix' => '</div>',
+        '#markup' => '',
+        '#weight' => -100,
+      );
+      
+      $themes = list_themes();
+      $theme = $form_state['build_info']['args'][0];
+      $zones = $themes[$theme]->info['zones'];
+      $regions = $themes[$theme]->info['regions'];
+      //krumo($settings_theme_info);
+      // loop over the children elements in the settings form
+      foreach(element_children($form['omega_grid']) AS $zone) {
+        //krumo($zone);
+        // skip over the default grid settings section
+        if($zone != 'defaults') {
+          
+          $z = array();
+          $z['#theme'] = 'zone_ui';
+          foreach($zones[$zone] AS $region) {
+            switch($region) {
+              case 'branding':
+              case 'menu':
+              case 'breadcrumb':
+                $subject = t(ucwords($region));
+              break;
+              default:
+                $subject = $regions[$region];
+              break;
+            }
+            $z['#regions'][$region]['#theme_wrappers'] = array('region');
+            $block = new stdClass();
+            $block->delta = $region;
+            $block->region = $region;
+            $block->module = 'omega_tools';
+            $block->subject = $subject;
+            $block->weight = -100;
+            $z['#regions'][$region]['omega_debug_'. $region] = array();
+            
+            $z['#regions'][$region]['#region'] = $region;
+            $z['#regions'][$region]['#sorted'] = FALSE;
+            $z['#regions'][$region]['omega_debug_'. $region]['#printed'] = FALSE;
+            $z['#regions'][$region]['omega_debug_'. $region]['#theme_wrappers'] = array('block');
+            $z['#regions'][$region]['omega_debug_'. $region]['#block'] = $block;
+            $z['#regions'][$region]['omega_debug_'. $region]['#markup'] = '<div class="region-data">'.$region.'</div>';
+          }
+          $form['omega_ui']['#markup'] .= render($z);
+        }
+      }
+    }
+    
+    //krumo($form);
   }
 }
 
 function omega_ui_preprocess_page($vars) {
   //$themes = list_themes();
   //krumo($themes);
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * @todo figure out WTF with template suggestions
+ * 
+ * @see delta_theme()
+ * @see http://api.drupal.org/api/function/hook_theme/7
+ * - There was cause to create a module here to implement a proper theme 
+ *   function. There was major issue with attempting to get the zone elements 
+ *   to work properly. zone.tpl.php was being used when declared here in 
+ *   omega_theme(), however, suggestions for more specific templates was NOT.
+ *   
+ * - The need here was to have the priority order be:
+ *   - zone-ZONEID.tpl.php (the actual zone itself has a custom override)
+ *     each have their own custom template to use for more generic implementations
+ *   - zone.tpl.php (default)
+ */
+function omega_ui_theme($existing, $type, $theme, $path) {
+  $hooks = array();
+  
+  $hooks['zone_ui'] = array(
+    'render element' => 'zone_ui',
+    'template' => 'zone_ui',
+    'preprocess functions' => array('omega_ui_preprocess_zone_ui'),
+    'process functions' => array('omega_ui_process_zone_ui'),
+  );
+  return $hooks;
+}
+
+function omega_ui_preprocess_zone_ui(&$vars) {
+  // include general functions required both in template.php AND theme-settings.php
+  require_once(drupal_get_path('theme', 'omega') . '/inc/theme-functions.inc');
+  drupal_add_css(drupal_get_path('theme', 'omega') . '/css/960-fluid.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE, 'weight', -100));
+  drupal_add_css(drupal_get_path('module', 'omega_ui') . '/css/oui.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE, 'weight', 0));
+  $zone = $vars['zone_ui'];
+  //krumo($vars);
+  $vars['attributes'] = '';
+  $vars['regions'] = $zone['#regions'];
+}
+function omega_ui_process_zone_ui(&$vars) {
+
 }
